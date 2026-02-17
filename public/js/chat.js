@@ -5,8 +5,7 @@
   const sendBtn = document.getElementById('btn-send');
   const chatListEl = document.getElementById('chat-list');
   const chatTitle = document.getElementById('chat-title');
-  const themeBtn = document.getElementById('theme-btn');
-  const themeMenu = document.getElementById('theme-menu');
+  const themeSelect = document.getElementById('theme-select');
   const newChatBtn = document.getElementById('btn-new-chat');
   const sidebarToggle = document.getElementById('btn-toggle-sidebar');
   const sidebar = document.getElementById('chat-sidebar');
@@ -16,32 +15,16 @@
   let streaming = false;
   let currentChatId = null;
 
-  // --- Theme (custom dropdown, no <select>) ---
+  // --- Theme ---
   const savedTheme = localStorage.getItem('theme') || '';
   if (savedTheme) {
     document.body.className = savedTheme;
+    themeSelect.value = savedTheme;
   }
-  function updateThemeActive() {
-    const current = localStorage.getItem('theme') || '';
-    themeMenu.querySelectorAll('.theme-option').forEach(opt => {
-      opt.classList.toggle('active', opt.dataset.theme === current);
-    });
-  }
-  updateThemeActive();
-
-  themeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    themeMenu.classList.toggle('open');
+  themeSelect.addEventListener('change', function () {
+    document.body.className = this.value;
+    localStorage.setItem('theme', this.value);
   });
-  themeMenu.addEventListener('click', (e) => {
-    const opt = e.target.closest('.theme-option');
-    if (!opt) return;
-    document.body.className = opt.dataset.theme;
-    localStorage.setItem('theme', opt.dataset.theme);
-    themeMenu.classList.remove('open');
-    updateThemeActive();
-  });
-  document.addEventListener('click', () => themeMenu.classList.remove('open'));
 
   // --- Sidebar toggle (mobile) ---
   sidebarToggle.addEventListener('click', () => {
@@ -126,7 +109,7 @@
     messagesEl.appendChild(welcomeEl);
     welcomeEl.style.display = '';
     chatTitle.textContent = 'New Chat';
-    clearInput();
+    inputEl.value = '';
     loadChats();
     sidebar.classList.remove('open');
   }
@@ -183,24 +166,22 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // --- Get/set text from contenteditable ---
-  function getInputText() {
-    return inputEl.innerText.trim();
-  }
-
-  function clearInput() {
-    inputEl.textContent = '';
-  }
+  // --- Auto-resize textarea ---
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
+  });
 
   // --- Send message ---
   async function sendMessage() {
-    const text = getInputText();
+    const text = inputEl.value.trim();
     if (!text || streaming) return;
 
     welcomeEl.style.display = 'none';
     messages.push({ role: 'user', content: text });
     appendMessageBubble('user', text);
-    clearInput();
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
     scrollToBottom();
 
     // Create assistant bubble for streaming
@@ -279,13 +260,6 @@
       e.preventDefault();
       sendMessage();
     }
-  });
-
-  // Paste as plain text only
-  inputEl.addEventListener('paste', (e) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
   });
 
   newChatBtn.addEventListener('click', newChat);

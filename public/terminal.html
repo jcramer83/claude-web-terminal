@@ -16,14 +16,13 @@
         <span class="toolbar-title" id="toolbar-title" title="Click to rename"></span>
       </div>
       <div class="toolbar-right">
-        <div class="theme-picker-custom" id="theme-picker">
-          <button class="theme-picker-btn" id="theme-btn">Theme</button>
-          <div class="theme-picker-menu" id="theme-menu">
-            <div class="theme-option" data-theme="">Default</div>
-            <div class="theme-option" data-theme="theme-monokai">Monokai</div>
-            <div class="theme-option" data-theme="theme-dracula">Dracula</div>
-            <div class="theme-option" data-theme="theme-nord">Nord</div>
-          </div>
+        <div class="theme-picker">
+          <select id="theme-select">
+            <option value="">Default</option>
+            <option value="theme-monokai">Monokai</option>
+            <option value="theme-dracula">Dracula</option>
+            <option value="theme-nord">Nord</option>
+          </select>
         </div>
         <button class="btn btn-ghost btn-sm" id="btn-export" title="Export terminal output">Export</button>
         <button class="btn btn-ghost btn-sm" id="btn-search" title="Search (Ctrl+Shift+F)">Search</button>
@@ -32,6 +31,7 @@
       </div>
     </div>
     <div class="search-bar" id="search-bar">
+      <input type="text" id="search-input" placeholder="Search terminal...">
       <button id="search-prev" title="Previous">&uarr;</button>
       <button id="search-next" title="Next">&darr;</button>
       <button id="search-close" title="Close">&times;</button>
@@ -48,6 +48,7 @@
           <button class="btn btn-ghost btn-sm" id="btn-new-file" title="New File">+ File</button>
           <button class="btn btn-ghost btn-sm" id="btn-new-dir" title="New Folder">+ Folder</button>
           <button class="btn btn-ghost btn-sm" id="btn-upload">Upload</button>
+          <input type="file" id="file-upload-input" style="display:none" multiple>
         </div>
         <div class="file-list" id="file-list"></div>
       </div>

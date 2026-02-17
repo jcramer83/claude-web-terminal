@@ -2,8 +2,7 @@
   const sessionId = window.location.pathname.split('/').pop();
   const statusEl = document.getElementById('conn-status');
   const titleEl = document.getElementById('toolbar-title');
-  const themeBtn = document.getElementById('theme-btn');
-  const themeMenu = document.getElementById('theme-menu');
+  const themeSelect = document.getElementById('theme-select');
 
   titleEl.textContent = 'Session ' + sessionId.slice(0, 8);
 
@@ -11,6 +10,7 @@
   const savedTheme = localStorage.getItem('theme') || '';
   if (savedTheme) {
     document.body.className = savedTheme;
+    themeSelect.value = savedTheme;
   }
 
   // Theme definitions for xterm
@@ -82,31 +82,13 @@
   fitAddon.fit();
   term.focus();
 
-  // Theme switcher (custom dropdown)
-  function updateThemeActive() {
-    const current = localStorage.getItem('theme') || '';
-    themeMenu.querySelectorAll('.theme-option').forEach(opt => {
-      opt.classList.toggle('active', opt.dataset.theme === current);
-    });
-  }
-  updateThemeActive();
-
-  themeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    themeMenu.classList.toggle('open');
-  });
-  themeMenu.addEventListener('click', (e) => {
-    const opt = e.target.closest('.theme-option');
-    if (!opt) return;
-    const t = opt.dataset.theme;
+  // Theme switcher
+  themeSelect.addEventListener('change', function () {
+    const t = this.value;
     document.body.className = t;
     localStorage.setItem('theme', t);
     term.options.theme = themes[t] || themes[''];
-    themeMenu.classList.remove('open');
-    updateThemeActive();
-    term.focus();
   });
-  document.addEventListener('click', () => themeMenu.classList.remove('open'));
 
   // --- Export terminal ---
   document.getElementById('btn-export').addEventListener('click', () => {
@@ -127,44 +109,17 @@
     }
   });
 
-  // --- Search (input created dynamically to avoid iOS keyboard bar) ---
+  // --- Search ---
   const searchBar = document.getElementById('search-bar');
+  const searchInput = document.getElementById('search-input');
   const btnSearch = document.getElementById('btn-search');
-  let searchInput = null;
-
-  function createSearchInput() {
-    if (searchInput) return;
-    searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.id = 'search-input';
-    searchInput.placeholder = 'Search terminal...';
-    searchBar.insertBefore(searchInput, searchBar.firstChild);
-    searchInput.addEventListener('input', () => {
-      if (searchInput.value) searchAddon.findNext(searchInput.value);
-    });
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.shiftKey ? searchAddon.findPrevious(searchInput.value) : searchAddon.findNext(searchInput.value);
-      }
-      if (e.key === 'Escape') toggleSearch();
-    });
-  }
-
-  function destroySearchInput() {
-    if (!searchInput) return;
-    searchInput.remove();
-    searchInput = null;
-  }
 
   function toggleSearch() {
-    const opening = !searchBar.classList.contains('active');
     searchBar.classList.toggle('active');
-    if (opening) {
-      createSearchInput();
+    if (searchBar.classList.contains('active')) {
       searchInput.focus();
     } else {
       searchAddon.clearDecorations();
-      destroySearchInput();
       term.focus();
     }
     fitAddon.fit();
@@ -173,8 +128,18 @@
 
   btnSearch.addEventListener('click', toggleSearch);
   document.getElementById('search-close').addEventListener('click', toggleSearch);
-  document.getElementById('search-prev').addEventListener('click', () => { if (searchInput) searchAddon.findPrevious(searchInput.value); });
-  document.getElementById('search-next').addEventListener('click', () => { if (searchInput) searchAddon.findNext(searchInput.value); });
+
+  searchInput.addEventListener('input', () => {
+    if (searchInput.value) searchAddon.findNext(searchInput.value);
+  });
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.shiftKey ? searchAddon.findPrevious(searchInput.value) : searchAddon.findNext(searchInput.value);
+    }
+    if (e.key === 'Escape') toggleSearch();
+  });
+  document.getElementById('search-prev').addEventListener('click', () => searchAddon.findPrevious(searchInput.value));
+  document.getElementById('search-next').addEventListener('click', () => searchAddon.findNext(searchInput.value));
 
   // --- File Browser ---
   const fileSidebar = document.getElementById('file-sidebar');
@@ -232,25 +197,21 @@
     });
   }
 
-  // Upload (input created dynamically to avoid iOS keyboard bar)
+  // Upload
   document.getElementById('btn-upload').addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = true;
-    input.style.display = 'none';
-    document.body.appendChild(input);
-    input.addEventListener('change', async () => {
-      for (const file of input.files) {
-        await fetch('/api/files/upload?path=' + encodeURIComponent(currentFilePath), {
-          method: 'POST',
-          headers: { 'X-Filename': file.name },
-          body: file
-        });
-      }
-      input.remove();
-      loadFiles(currentFilePath);
-    });
-    input.click();
+    document.getElementById('file-upload-input').click();
+  });
+
+  document.getElementById('file-upload-input').addEventListener('change', async (e) => {
+    for (const file of e.target.files) {
+      await fetch('/api/files/upload?path=' + encodeURIComponent(currentFilePath), {
+        method: 'POST',
+        headers: { 'X-Filename': file.name },
+        body: file
+      });
+    }
+    e.target.value = '';
+    loadFiles(currentFilePath);
   });
 
   // --- Clipboard ---

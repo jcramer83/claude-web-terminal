@@ -703,56 +703,6 @@ body {
   border-top: 1px solid var(--border);
 }
 
-.chat-sidebar-footer .theme-picker-menu {
-  top: auto;
-  bottom: 100%;
-  margin-top: 0;
-  margin-bottom: 4px;
-}
-
-/* Custom theme picker (no <select> to avoid iOS keyboard bar) */
-.theme-picker-custom {
-  position: relative;
-}
-
-.theme-picker-btn {
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.theme-picker-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
-
-.theme-picker-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  min-width: 120px;
-  z-index: 10;
-}
-
-.theme-picker-menu.open { display: block; }
-
-.theme-option {
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.theme-option:hover { background: var(--bg-tertiary); }
-.theme-option.active { color: var(--accent); }
-
 /* Chat Main */
 .chat-main {
   flex: 1;
@@ -896,7 +846,7 @@ body {
   background: var(--bg-secondary);
 }
 
-.chat-input {
+.chat-input-bar textarea {
   flex: 1;
   padding: 10px 14px;
   background: var(--bg-primary);
@@ -905,23 +855,13 @@ body {
   color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
+  resize: none;
   outline: none;
   max-height: 150px;
   line-height: 1.4;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  -webkit-user-select: text;
-  user-select: text;
 }
 
-.chat-input:empty::before {
-  content: attr(aria-placeholder);
-  color: var(--text-secondary);
-  pointer-events: none;
-}
-
-.chat-input:focus { border-color: var(--accent); }
+.chat-input-bar textarea:focus { border-color: var(--accent); }
 
 .btn-send {
   background: var(--accent);
@@ -969,6 +909,6 @@ body {
   .btn { min-height: 44px; }
   .session-card { padding: 16px 18px; }
   .file-item { padding: 10px 12px; }
-  .chat-input { font-size: 16px; }
+  .chat-input-bar textarea { font-size: 16px; }
   .btn-send { width: 44px; height: 44px; }
 }
