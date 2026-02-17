@@ -109,7 +109,7 @@
     messagesEl.appendChild(welcomeEl);
     welcomeEl.style.display = '';
     chatTitle.textContent = 'New Chat';
-    inputEl.value = '';
+    clearInput();
     loadChats();
     sidebar.classList.remove('open');
   }
@@ -166,22 +166,24 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // --- Auto-resize textarea ---
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
-  });
+  // --- Get/set text from contenteditable ---
+  function getInputText() {
+    return inputEl.innerText.trim();
+  }
+
+  function clearInput() {
+    inputEl.textContent = '';
+  }
 
   // --- Send message ---
   async function sendMessage() {
-    const text = inputEl.value.trim();
+    const text = getInputText();
     if (!text || streaming) return;
 
     welcomeEl.style.display = 'none';
     messages.push({ role: 'user', content: text });
     appendMessageBubble('user', text);
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
+    clearInput();
     scrollToBottom();
 
     // Create assistant bubble for streaming
@@ -255,6 +257,13 @@
       e.preventDefault();
       sendMessage();
     }
+  });
+
+  // Paste as plain text only
+  inputEl.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
   });
 
   newChatBtn.addEventListener('click', newChat);

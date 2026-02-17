@@ -846,7 +846,7 @@ body {
   background: var(--bg-secondary);
 }
 
-.chat-input-bar textarea {
+.chat-input {
   flex: 1;
   padding: 10px 14px;
   background: var(--bg-primary);
@@ -855,13 +855,23 @@ body {
   color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
-  resize: none;
   outline: none;
   max-height: 150px;
   line-height: 1.4;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
-.chat-input-bar textarea:focus { border-color: var(--accent); }
+.chat-input:empty::before {
+  content: attr(aria-placeholder);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.chat-input:focus { border-color: var(--accent); }
 
 .btn-send {
   background: var(--accent);
@@ -909,6 +919,6 @@ body {
   .btn { min-height: 44px; }
   .session-card { padding: 16px 18px; }
   .file-item { padding: 10px 12px; }
-  .chat-input-bar textarea { font-size: 16px; }
+  .chat-input { font-size: 16px; }
   .btn-send { width: 44px; height: 44px; }
 }
