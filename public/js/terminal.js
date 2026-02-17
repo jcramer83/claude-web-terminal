@@ -43,6 +43,28 @@
   term.open(document.getElementById('terminal-container'));
   fitAddon.fit();
 
+  // Handle Ctrl+C (copy if selection, else send interrupt) and Ctrl+V (paste)
+  term.attachCustomKeyEventHandler(function (ev) {
+    if (ev.type !== 'keydown') return true;
+
+    if (ev.ctrlKey && ev.key === 'c' && term.hasSelection()) {
+      navigator.clipboard.writeText(term.getSelection());
+      term.clearSelection();
+      return false; // prevent sending to PTY
+    }
+
+    if (ev.ctrlKey && ev.key === 'v') {
+      navigator.clipboard.readText().then(function (text) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data: text }));
+        }
+      });
+      return false;
+    }
+
+    return true;
+  });
+
   // WebSocket connection
   let ws;
   let reconnectTimer;
