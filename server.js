@@ -417,7 +417,6 @@ app.post('/api/chat', requireAuth, (req, res) => {
     '-p', message,
     '--output-format', 'json',
     '--max-turns', '1',
-    '--no-session-persistence',
     '--dangerously-skip-permissions',
     '--strict-mcp-config'
   ];
