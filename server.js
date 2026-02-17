@@ -367,8 +367,11 @@ app.get('/api/chat/test', requireAuth, (req, res) => {
   delete chatEnv.CLAUDECODE;
   delete chatEnv.CLAUDE_CODE_ENTRYPOINT;
 
-  const args = ['-p', 'say hi', '--output-format', 'json', '--max-turns', '1', '--no-session-persistence', '--dangerously-skip-permissions'];
-  const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv });
+  const args = ['-p', 'say hi', '--output-format', 'json', '--max-turns', '1',
+    '--no-session-persistence', '--dangerously-skip-permissions', '--strict-mcp-config'];
+  const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv, stdio: ['pipe', 'pipe', 'pipe'] });
+  proc.stdin.end();
+
   let out = '', err = '';
   let responded = false;
 
@@ -383,8 +386,8 @@ app.get('/api/chat/test', requireAuth, (req, res) => {
 
   const timeout = setTimeout(() => {
     proc.kill('SIGKILL');
-    respond({ error: 'timeout after 30s', stdout: out, stderr: err, args, home: chatEnv.HOME });
-  }, 30000);
+    respond({ error: 'timeout after 15s', stdout: out, stderr: err, args, home: chatEnv.HOME });
+  }, 15000);
 
   proc.on('close', code => {
     clearTimeout(timeout);
@@ -415,7 +418,8 @@ app.post('/api/chat', requireAuth, (req, res) => {
     '--output-format', 'json',
     '--max-turns', '1',
     '--no-session-persistence',
-    '--dangerously-skip-permissions'
+    '--dangerously-skip-permissions',
+    '--strict-mcp-config'
   ];
 
   if (sessionId) {
@@ -428,7 +432,8 @@ app.post('/api/chat', requireAuth, (req, res) => {
 
   console.log('[chat] spawning: claude', args.join(' '));
 
-  const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv });
+  const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv, stdio: ['pipe', 'pipe', 'pipe'] });
+  proc.stdin.end();
 
   const procId = uuidv4();
   chatProcesses.set(procId, proc);
