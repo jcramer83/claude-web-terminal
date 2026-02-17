@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI globally
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code CLI globally (use --force to ensure latest on rebuild)
+RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Create non-root user
 RUN useradd -m -s /bin/bash -d /home/claude claude

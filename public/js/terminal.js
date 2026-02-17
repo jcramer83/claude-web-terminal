@@ -214,7 +214,63 @@
     loadFiles(currentFilePath);
   });
 
-  // --- Clipboard ---
+  // --- Special Keys Bar ---
+  var ctrlActive = false;
+  var altActive = false;
+  var skeyCtrl = document.getElementById('skey-ctrl');
+  var skeyAlt = document.getElementById('skey-alt');
+
+  // Ctrl+key mapping to control characters (ASCII 1-26)
+  var ctrlKeyMap = {
+    'a': '\x01', 'b': '\x02', 'c': '\x03', 'd': '\x04', 'e': '\x05',
+    'f': '\x06', 'g': '\x07', 'h': '\x08', 'i': '\x09', 'j': '\x0a',
+    'k': '\x0b', 'l': '\x0c', 'm': '\x0d', 'n': '\x0e', 'o': '\x0f',
+    'p': '\x10', 'q': '\x11', 'r': '\x12', 's': '\x13', 't': '\x14',
+    'u': '\x15', 'v': '\x16', 'w': '\x17', 'x': '\x18', 'y': '\x19',
+    'z': '\x1a'
+  };
+
+  function clearModifiers() {
+    ctrlActive = false;
+    altActive = false;
+    skeyCtrl.classList.remove('active');
+    skeyAlt.classList.remove('active');
+  }
+
+  skeyCtrl.addEventListener('click', function (e) {
+    e.preventDefault();
+    ctrlActive = !ctrlActive;
+    skeyCtrl.classList.toggle('active', ctrlActive);
+    term.focus();
+  });
+
+  skeyAlt.addEventListener('click', function (e) {
+    e.preventDefault();
+    altActive = !altActive;
+    skeyAlt.classList.toggle('active', altActive);
+    term.focus();
+  });
+
+  // Handle regular special key buttons
+  document.querySelectorAll('.skey:not(.skey-toggle)').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var key = btn.getAttribute('data-key');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        if (ctrlActive && key.length === 1 && ctrlKeyMap[key.toLowerCase()]) {
+          ws.send(JSON.stringify({ type: 'input', data: ctrlKeyMap[key.toLowerCase()] }));
+        } else if (altActive && key.length === 1) {
+          ws.send(JSON.stringify({ type: 'input', data: '\x1b' + key }));
+        } else {
+          ws.send(JSON.stringify({ type: 'input', data: key }));
+        }
+        clearModifiers();
+      }
+      term.focus();
+    });
+  });
+
+  // --- Clipboard + modifier key intercept (single handler) ---
   term.attachCustomKeyEventHandler(function (ev) {
     if (ev.type !== 'keydown') return true;
 
@@ -238,6 +294,25 @@
           ws.send(JSON.stringify({ type: 'input', data: text }));
         }
       });
+      return false;
+    }
+
+    // If Ctrl toggle is active and a letter key is pressed, send ctrl sequence
+    if (ctrlActive && ev.key.length === 1 && /^[a-zA-Z]$/.test(ev.key)) {
+      var ch = ev.key.toLowerCase();
+      if (ws && ws.readyState === WebSocket.OPEN && ctrlKeyMap[ch]) {
+        ws.send(JSON.stringify({ type: 'input', data: ctrlKeyMap[ch] }));
+      }
+      clearModifiers();
+      return false;
+    }
+
+    // If Alt toggle is active, send alt (ESC prefix) sequence
+    if (altActive && ev.key.length === 1) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input', data: '\x1b' + ev.key }));
+      }
+      clearModifiers();
       return false;
     }
 
