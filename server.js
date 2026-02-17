@@ -98,11 +98,13 @@ app.post('/api/sessions', requireAuth, (req, res) => {
     env: {
       ...process.env,
       TERM: 'xterm-256color',
-      COLORTERM: 'truecolor'
+      COLORTERM: 'truecolor',
+      HOME: process.env.HOME || '/home/claude'
     }
   });
 
-  // Send the claude command to the shell after a brief delay
+  // Launch claude CLI after shell is ready
+  // On first run with Claude Max, it will show an OAuth URL to authenticate
   setTimeout(() => {
     ptyProcess.write('claude\r');
   }, 300);

@@ -4,15 +4,19 @@ services:
     image: claude-web-terminal:latest
     container_name: claude-web-terminal
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # For Claude Max: leave ANTHROPIC_API_KEY empty, authenticate via CLI on first session
+      # For API key: set ANTHROPIC_API_KEY to your key
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - AUTH_USER=${AUTH_USER:-admin}
       - AUTH_PASSWORD=${AUTH_PASSWORD:-}
       - TZ=America/Chicago
     ports:
       - "3000:3000"
     volumes:
+      - claude-config:/home/claude/.claude    # Persists OAuth tokens across restarts
       - workspace:/workspace
     restart: unless-stopped
 
 volumes:
+  claude-config:
   workspace:

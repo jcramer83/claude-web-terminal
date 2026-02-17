@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
+# Create non-root user so claude CLI runs normally
+RUN useradd -m -s /bin/bash -d /home/claude claude
+
 # Create app directory
 WORKDIR /app
 
@@ -24,8 +27,12 @@ RUN npm install --production
 COPY server.js ./
 COPY public/ ./public/
 
-# Create workspace directory
-RUN mkdir -p /workspace
+# Create workspace and config directories
+RUN mkdir -p /workspace /home/claude/.claude \
+    && chown -R claude:claude /workspace /home/claude
+
+USER claude
+ENV HOME=/home/claude
 
 EXPOSE 3000
 
