@@ -361,21 +361,30 @@ app.get('/chat', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 
-// Chat diagnostic endpoint
+// Chat diagnostic endpoint — runs an actual claude -p to show what happens
 app.get('/api/chat/test', requireAuth, (req, res) => {
-  const chatEnv = { ...process.env };
+  const chatEnv = { ...process.env, HOME: process.env.HOME || '/home/claude' };
   delete chatEnv.CLAUDECODE;
   delete chatEnv.CLAUDE_CODE_ENTRYPOINT;
 
-  const proc = spawn('claude', ['--version'], { env: chatEnv });
+  const args = ['-p', 'say hi', '--output-format', 'json', '--max-turns', '1'];
+  const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv });
   let out = '', err = '';
   proc.stdout.on('data', d => out += d);
   proc.stderr.on('data', d => err += d);
+
+  const timeout = setTimeout(() => {
+    proc.kill();
+    res.json({ error: 'timeout after 30s', stdout: out, stderr: err, args });
+  }, 30000);
+
   proc.on('close', code => {
-    res.json({ code, stdout: out.trim(), stderr: err.trim(), cwd: WORKSPACE });
+    clearTimeout(timeout);
+    res.json({ code, stdout: out.substring(0, 2000), stderr: err.substring(0, 2000), args, home: chatEnv.HOME });
   });
   proc.on('error', e => {
-    res.json({ error: e.message });
+    clearTimeout(timeout);
+    res.json({ error: e.message, args });
   });
 });
 
