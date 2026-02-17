@@ -367,24 +367,32 @@ app.get('/api/chat/test', requireAuth, (req, res) => {
   delete chatEnv.CLAUDECODE;
   delete chatEnv.CLAUDE_CODE_ENTRYPOINT;
 
-  const args = ['-p', 'say hi', '--output-format', 'json', '--max-turns', '1'];
+  const args = ['-p', 'say hi', '--output-format', 'json', '--max-turns', '1', '--no-session-persistence', '--dangerously-skip-permissions'];
   const proc = spawn('claude', args, { cwd: WORKSPACE, env: chatEnv });
   let out = '', err = '';
+  let responded = false;
+
+  function respond(data) {
+    if (responded) return;
+    responded = true;
+    res.json(data);
+  }
+
   proc.stdout.on('data', d => out += d);
   proc.stderr.on('data', d => err += d);
 
   const timeout = setTimeout(() => {
-    proc.kill();
-    res.json({ error: 'timeout after 30s', stdout: out, stderr: err, args });
+    proc.kill('SIGKILL');
+    respond({ error: 'timeout after 30s', stdout: out, stderr: err, args, home: chatEnv.HOME });
   }, 30000);
 
   proc.on('close', code => {
     clearTimeout(timeout);
-    res.json({ code, stdout: out.substring(0, 2000), stderr: err.substring(0, 2000), args, home: chatEnv.HOME });
+    respond({ code, stdout: out.substring(0, 2000), stderr: err.substring(0, 2000), args, home: chatEnv.HOME });
   });
   proc.on('error', e => {
     clearTimeout(timeout);
-    res.json({ error: e.message, args });
+    respond({ error: e.message, args });
   });
 });
 
@@ -402,7 +410,13 @@ app.post('/api/chat', requireAuth, (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const args = ['-p', message, '--output-format', 'json', '--max-turns', '1'];
+  const args = [
+    '-p', message,
+    '--output-format', 'json',
+    '--max-turns', '1',
+    '--no-session-persistence',
+    '--dangerously-skip-permissions'
+  ];
 
   if (sessionId) {
     args.push('--resume', sessionId);
