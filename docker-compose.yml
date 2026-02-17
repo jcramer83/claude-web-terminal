@@ -13,10 +13,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - claude-config:/home/claude/.claude    # Persists OAuth tokens across restarts
+      - claude-home:/home/claude    # Persists entire home dir (OAuth tokens, config, etc.)
       - workspace:/workspace
     restart: unless-stopped
 
 volumes:
-  claude-config:
+  claude-home:
   workspace:
