@@ -388,9 +388,12 @@ app.post('/api/chat', requireAuth, (req, res) => {
     args.push('--resume', sessionId);
   }
 
+  const chatEnv = { ...process.env, HOME: process.env.HOME || '/home/claude' };
+  delete chatEnv.CLAUDECODE;
+
   const proc = spawn('claude', args, {
     cwd: WORKSPACE,
-    env: { ...process.env, HOME: process.env.HOME || '/home/claude' }
+    env: chatEnv
   });
 
   const procId = uuidv4();
@@ -424,12 +427,16 @@ app.post('/api/chat', requireAuth, (req, res) => {
     }
   });
 
+  let stderrBuf = '';
   proc.stderr.on('data', (chunk) => {
-    // Ignore stderr noise from CLI startup
+    stderrBuf += chunk.toString();
   });
 
-  proc.on('close', () => {
+  proc.on('close', (code) => {
     chatProcesses.delete(procId);
+    if (code !== 0 && stderrBuf.trim()) {
+      res.write(`data: ${JSON.stringify({ type: 'error', content: stderrBuf.trim() })}\n\n`);
+    }
     res.write(`data: ${JSON.stringify({ type: 'done', sessionId: resultSessionId })}\n\n`);
     res.end();
   });
