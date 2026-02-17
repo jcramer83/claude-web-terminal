@@ -1,17 +1,11 @@
 #!/bin/bash
 set -e
 
-# Ensure .claude directory structure exists and is owned by claude user
-# This is needed because Docker volumes mount as root
-dirs=(
-  "$HOME/.claude"
-  "$HOME/.claude/debug"
-  "$HOME/.claude/statsig"
-  "$HOME/.claude/projects"
-)
+# Fix ownership on mounted volumes (runs as root)
+chown -R claude:claude /home/claude/.claude /workspace
 
-for dir in "${dirs[@]}"; do
-  mkdir -p "$dir"
-done
+# Create required subdirectories
+su claude -c "mkdir -p /home/claude/.claude/debug /home/claude/.claude/statsig /home/claude/.claude/projects"
 
-exec node /app/server.js
+# Drop to claude user and start the server
+exec su claude -c "node /app/server.js"

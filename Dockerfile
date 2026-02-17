@@ -33,9 +33,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN mkdir -p /workspace /home/claude/.claude/debug \
     && chown -R claude:claude /workspace /home/claude /app
 
-USER claude
 ENV HOME=/home/claude
 
 EXPOSE 3000
 
+# Run entrypoint as root so it can fix volume permissions, then drops to claude user
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
