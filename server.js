@@ -113,8 +113,24 @@ app.post('/api/sessions', requireAuth, (req, res) => {
     pty: ptyProcess,
     createdAt: new Date().toISOString(),
     title: `Session ${sessions.size + 1}`,
-    clients: new Set()
+    clients: new Set(),
+    scrollback: []  // Buffer recent output for reconnects
   };
+
+  // Buffer PTY output for session replay on reconnect
+  const SCROLLBACK_LIMIT = 100000; // ~100KB of terminal output
+  ptyProcess.onData((data) => {
+    sessionData.scrollback.push(data);
+    // Trim if buffer gets too large
+    let totalLen = 0;
+    for (let i = sessionData.scrollback.length - 1; i >= 0; i--) {
+      totalLen += sessionData.scrollback[i].length;
+      if (totalLen > SCROLLBACK_LIMIT) {
+        sessionData.scrollback = sessionData.scrollback.slice(i + 1);
+        break;
+      }
+    }
+  });
 
   // Clean up when PTY exits
   ptyProcess.onExit(() => {
@@ -181,6 +197,11 @@ wss.on('connection', (ws, request, sessionId) => {
   }
 
   sessionData.clients.add(ws);
+
+  // Replay scrollback buffer so returning clients see the terminal state
+  if (sessionData.scrollback.length > 0) {
+    ws.send(JSON.stringify({ type: 'output', data: sessionData.scrollback.join('') }));
+  }
 
   // Forward PTY output to WebSocket
   const dataHandler = sessionData.pty.onData((data) => {
