@@ -252,6 +252,88 @@ app.post('/api/files/upload', requireAuth, (req, res) => {
   writeStream.on('error', (err) => res.status(500).json({ error: err.message }));
 });
 
+// Create file
+app.post('/api/files/create', requireAuth, (req, res) => {
+  const reqPath = req.body.path;
+  if (!reqPath) return res.status(400).json({ error: 'Path required' });
+  const fullPath = path.join(WORKSPACE, reqPath);
+  const resolved = path.resolve(fullPath);
+
+  if (!resolved.startsWith(path.resolve(WORKSPACE))) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    if (fs.existsSync(resolved)) {
+      return res.status(409).json({ error: 'Already exists' });
+    }
+    fs.writeFileSync(resolved, '');
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create directory
+app.post('/api/files/mkdir', requireAuth, (req, res) => {
+  const reqPath = req.body.path;
+  if (!reqPath) return res.status(400).json({ error: 'Path required' });
+  const fullPath = path.join(WORKSPACE, reqPath);
+  const resolved = path.resolve(fullPath);
+
+  if (!resolved.startsWith(path.resolve(WORKSPACE))) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    fs.mkdirSync(resolved, { recursive: true });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete file or directory
+app.post('/api/files/delete', requireAuth, (req, res) => {
+  const reqPath = req.body.path;
+  if (!reqPath || reqPath === '/') return res.status(400).json({ error: 'Cannot delete root' });
+  const fullPath = path.join(WORKSPACE, reqPath);
+  const resolved = path.resolve(fullPath);
+
+  if (!resolved.startsWith(path.resolve(WORKSPACE)) || resolved === path.resolve(WORKSPACE)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const stat = fs.statSync(resolved);
+    if (stat.isDirectory()) {
+      fs.rmSync(resolved, { recursive: true });
+    } else {
+      fs.unlinkSync(resolved);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Export terminal scrollback
+app.get('/api/sessions/:id/export', requireAuth, (req, res) => {
+  const s = sessions.get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Session not found' });
+
+  // Strip ANSI escape codes for clean text export
+  const raw = s.scrollback.join('');
+  const clean = raw.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\x1b\][^\x07]*\x07/g, '')
+    .replace(/\x1b[()][0-9A-B]/g, '')
+    .replace(/\r/g, '');
+
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Content-Disposition', `attachment; filename="${s.title.replace(/[^a-zA-Z0-9-_ ]/g, '')}-export.txt"`);
+  res.send(clean);
+});
+
 // --- Workspace directories API ---
 
 app.get('/api/workspaces', requireAuth, (req, res) => {

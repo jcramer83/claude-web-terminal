@@ -90,6 +90,11 @@
     term.options.theme = themes[t] || themes[''];
   });
 
+  // --- Export terminal ---
+  document.getElementById('btn-export').addEventListener('click', () => {
+    window.open('/api/sessions/' + sessionId + '/export', '_blank');
+  });
+
   // --- Rename session ---
   titleEl.addEventListener('click', async () => {
     const newName = prompt('Rename session:', titleEl.textContent);
@@ -272,6 +277,7 @@
         } else if (msg.type === 'exit') {
           term.write('\r\n\x1b[33mSession ended.\x1b[0m\r\n');
           setStatus(false);
+          showRestartBanner();
         }
       } catch (e) {
         term.write(event.data);
@@ -320,6 +326,84 @@
     sendResize();
   });
   resizeObserver.observe(document.getElementById('terminal-container'));
+
+  // --- Restart banner ---
+  function showRestartBanner() {
+    var existing = document.getElementById('restart-banner');
+    if (existing) return;
+    var banner = document.createElement('div');
+    banner.id = 'restart-banner';
+    banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:flex;gap:12px;align-items:center;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+    banner.innerHTML = '<span style="color:var(--text-secondary);font-size:13px;">Session ended</span>' +
+      '<button class="btn btn-new btn-sm" id="btn-restart">Restart Session</button>' +
+      '<a href="/" class="btn btn-ghost btn-sm">Back to Sessions</a>';
+    document.body.appendChild(banner);
+    document.getElementById('btn-restart').addEventListener('click', async function () {
+      this.disabled = true;
+      this.textContent = 'Starting...';
+      var res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      var data = await res.json();
+      window.location.href = '/terminal/' + data.id;
+    });
+  }
+
+  // --- File management ---
+  document.getElementById('btn-new-file').addEventListener('click', async () => {
+    var name = prompt('New file name:');
+    if (!name || !name.trim()) return;
+    var filePath = currentFilePath === '/' ? '/' + name.trim() : currentFilePath + '/' + name.trim();
+    await fetch('/api/files/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath })
+    });
+    loadFiles(currentFilePath);
+  });
+
+  document.getElementById('btn-new-dir').addEventListener('click', async () => {
+    var name = prompt('New folder name:');
+    if (!name || !name.trim()) return;
+    var dirPath = currentFilePath === '/' ? '/' + name.trim() : currentFilePath + '/' + name.trim();
+    await fetch('/api/files/mkdir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: dirPath })
+    });
+    loadFiles(currentFilePath);
+  });
+
+  // Add delete button to file items (patching loadFiles)
+  var _origLoadFiles = loadFiles;
+  loadFiles = async function (dirPath) {
+    await _origLoadFiles(dirPath);
+    // Add delete buttons to each file item
+    var items = fileList.querySelectorAll('.file-item');
+    items.forEach(function (el) {
+      // Skip the ".." parent entry
+      if (el.querySelector('.file-item-name').textContent === '..') return;
+      var delBtn = document.createElement('span');
+      delBtn.textContent = '\u00d7';
+      delBtn.title = 'Delete';
+      delBtn.style.cssText = 'margin-left:auto;color:var(--text-secondary);cursor:pointer;padding:0 4px;font-size:16px;flex-shrink:0;';
+      delBtn.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        var name = el.querySelector('.file-item-name').textContent;
+        if (!confirm('Delete "' + name + '"?')) return;
+        var itemPath = currentFilePath === '/' ? '/' + name : currentFilePath + '/' + name;
+        await fetch('/api/files/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: itemPath })
+        });
+        loadFiles(currentFilePath);
+      });
+      el.appendChild(delBtn);
+    });
+  };
 
   connect();
 })();

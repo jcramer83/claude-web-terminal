@@ -24,6 +24,7 @@
             <option value="theme-nord">Nord</option>
           </select>
         </div>
+        <button class="btn btn-ghost btn-sm" id="btn-export" title="Export terminal output">Export</button>
         <button class="btn btn-ghost btn-sm" id="btn-search" title="Search (Ctrl+Shift+F)">Search</button>
         <button class="btn btn-ghost btn-sm" id="btn-files" title="File Browser">Files</button>
         <span class="connection-status" id="conn-status">Connected</span>
@@ -44,6 +45,8 @@
         </div>
         <div class="file-sidebar-path" id="file-path">/</div>
         <div class="file-sidebar-actions">
+          <button class="btn btn-ghost btn-sm" id="btn-new-file" title="New File">+ File</button>
+          <button class="btn btn-ghost btn-sm" id="btn-new-dir" title="New Folder">+ Folder</button>
           <button class="btn btn-ghost btn-sm" id="btn-upload">Upload</button>
           <input type="file" id="file-upload-input" style="display:none" multiple>
         </div>
