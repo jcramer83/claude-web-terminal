@@ -361,6 +361,24 @@ app.get('/chat', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 
+// Chat diagnostic endpoint
+app.get('/api/chat/test', requireAuth, (req, res) => {
+  const chatEnv = { ...process.env };
+  delete chatEnv.CLAUDECODE;
+  delete chatEnv.CLAUDE_CODE_ENTRYPOINT;
+
+  const proc = spawn('claude', ['--version'], { env: chatEnv });
+  let out = '', err = '';
+  proc.stdout.on('data', d => out += d);
+  proc.stderr.on('data', d => err += d);
+  proc.on('close', code => {
+    res.json({ code, stdout: out.trim(), stderr: err.trim(), cwd: WORKSPACE });
+  });
+  proc.on('error', e => {
+    res.json({ error: e.message });
+  });
+});
+
 // Active chat processes (to allow cancellation)
 const chatProcesses = new Map();
 
@@ -390,6 +408,9 @@ app.post('/api/chat', requireAuth, (req, res) => {
 
   const chatEnv = { ...process.env, HOME: process.env.HOME || '/home/claude' };
   delete chatEnv.CLAUDECODE;
+  delete chatEnv.CLAUDE_CODE_ENTRYPOINT;
+
+  console.log('[chat] spawning claude with args:', args.join(' '));
 
   const proc = spawn('claude', args, {
     cwd: WORKSPACE,
@@ -429,11 +450,14 @@ app.post('/api/chat', requireAuth, (req, res) => {
 
   let stderrBuf = '';
   proc.stderr.on('data', (chunk) => {
-    stderrBuf += chunk.toString();
+    const text = chunk.toString();
+    stderrBuf += text;
+    console.log('[chat][stderr]', text);
   });
 
   proc.on('close', (code) => {
     chatProcesses.delete(procId);
+    console.log('[chat] process exited with code', code);
     if (code !== 0 && stderrBuf.trim()) {
       res.write(`data: ${JSON.stringify({ type: 'error', content: stderrBuf.trim() })}\n\n`);
     }

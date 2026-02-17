@@ -202,6 +202,11 @@
         body: JSON.stringify({ message: text, sessionId })
       });
 
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errBody}`);
+      }
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let sseBuffer = '';
@@ -225,14 +230,14 @@
             } else if (evt.type === 'done') {
               if (evt.sessionId) sessionId = evt.sessionId;
             } else if (evt.type === 'error') {
-              fullText += '\n\n**Error:** ' + evt.content;
+              fullText += (fullText ? '\n\n' : '') + '**Error:** ' + evt.content;
               assistantBubble.innerHTML = renderMarkdown(fullText);
             }
           } catch {}
         }
       }
     } catch (err) {
-      fullText = '**Connection error.** Please try again.';
+      fullText = '**Error:** ' + err.message;
       assistantBubble.innerHTML = renderMarkdown(fullText);
     }
 
