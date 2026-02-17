@@ -415,7 +415,9 @@ app.post('/api/chat', requireAuth, (req, res) => {
 
   const args = [
     '-p', message,
-    '--output-format', 'json',
+    '--output-format', 'stream-json',
+    '--verbose',
+    '--include-partial-messages',
     '--max-turns', '1',
     '--dangerously-skip-permissions',
     '--strict-mcp-config'
@@ -437,10 +439,33 @@ app.post('/api/chat', requireAuth, (req, res) => {
   const procId = uuidv4();
   chatProcesses.set(procId, proc);
 
-  let stdout = '';
+  let buffer = '';
+  let resultSessionId = sessionId || null;
   let stderrBuf = '';
 
-  proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+  proc.stdout.on('data', (chunk) => {
+    buffer += chunk.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+
+        if (obj.session_id) {
+          resultSessionId = obj.session_id;
+        }
+
+        // Streaming text deltas (token-by-token)
+        if (obj.type === 'stream_event' &&
+            obj.event?.type === 'content_block_delta' &&
+            obj.event?.delta?.text) {
+          res.write(`data: ${JSON.stringify({ type: 'text', content: obj.event.delta.text })}\n\n`);
+        }
+      } catch {}
+    }
+  });
 
   proc.stderr.on('data', (chunk) => {
     stderrBuf += chunk.toString();
@@ -449,30 +474,11 @@ app.post('/api/chat', requireAuth, (req, res) => {
 
   proc.on('close', (code) => {
     chatProcesses.delete(procId);
-    console.log('[chat] exit code:', code, 'stdout length:', stdout.length);
-
-    if (code !== 0 || !stdout.trim()) {
-      const errMsg = stderrBuf.trim() || `Process exited with code ${code}`;
-      res.write(`data: ${JSON.stringify({ type: 'error', content: errMsg })}\n\n`);
-      res.write(`data: ${JSON.stringify({ type: 'done', sessionId: null })}\n\n`);
-      res.end();
-      return;
+    console.log('[chat] exit code:', code);
+    if (code !== 0 && stderrBuf.trim()) {
+      res.write(`data: ${JSON.stringify({ type: 'error', content: stderrBuf.trim() })}\n\n`);
     }
-
-    try {
-      const result = JSON.parse(stdout);
-      const text = result.result || '';
-      const sid = result.session_id || sessionId || null;
-
-      if (text) {
-        res.write(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`);
-      }
-      res.write(`data: ${JSON.stringify({ type: 'done', sessionId: sid })}\n\n`);
-    } catch (e) {
-      // Not valid JSON — send raw stdout as text
-      res.write(`data: ${JSON.stringify({ type: 'text', content: stdout.trim() })}\n\n`);
-      res.write(`data: ${JSON.stringify({ type: 'done', sessionId: null })}\n\n`);
-    }
+    res.write(`data: ${JSON.stringify({ type: 'done', sessionId: resultSessionId })}\n\n`);
     res.end();
   });
 
