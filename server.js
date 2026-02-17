@@ -378,8 +378,10 @@ app.post('/api/chat', requireAuth, (req, res) => {
   const args = [
     '-p', message,
     '--output-format', 'stream-json',
+    '--verbose',
+    '--include-partial-messages',
     '--max-turns', '1',
-    '--allowedTools', ''
+    '--tools', ''
   ];
 
   if (sessionId) {
@@ -412,21 +414,11 @@ app.post('/api/chat', requireAuth, (req, res) => {
           resultSessionId = obj.session_id;
         }
 
-        // Handle assistant message content
-        if (obj.type === 'assistant' && obj.message) {
-          const content = obj.message.content;
-          if (Array.isArray(content)) {
-            for (const block of content) {
-              if (block.type === 'text' && block.text) {
-                res.write(`data: ${JSON.stringify({ type: 'text', content: block.text })}\n\n`);
-              }
-            }
-          }
-        }
-
-        // Handle content_block_delta for streaming partial text
-        if (obj.type === 'content_block_delta' && obj.delta?.text) {
-          res.write(`data: ${JSON.stringify({ type: 'text', content: obj.delta.text })}\n\n`);
+        // Handle streaming text deltas (token-by-token)
+        if (obj.type === 'stream_event' &&
+            obj.event?.type === 'content_block_delta' &&
+            obj.event?.delta?.text) {
+          res.write(`data: ${JSON.stringify({ type: 'text', content: obj.event.delta.text })}\n\n`);
         }
       } catch {}
     }
