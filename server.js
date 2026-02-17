@@ -99,7 +99,7 @@ app.post('/api/sessions', requireAuth, (req, res) => {
       ...process.env,
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor',
-      HOME: process.env.HOME || '/root'
+      HOME: process.env.HOME || '/home/claude'
     }
   });
 
