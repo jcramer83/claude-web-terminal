@@ -5,7 +5,8 @@
   const sendBtn = document.getElementById('btn-send');
   const chatListEl = document.getElementById('chat-list');
   const chatTitle = document.getElementById('chat-title');
-  const themeSelect = document.getElementById('theme-select');
+  const themeBtn = document.getElementById('theme-btn');
+  const themeMenu = document.getElementById('theme-menu');
   const newChatBtn = document.getElementById('btn-new-chat');
   const sidebarToggle = document.getElementById('btn-toggle-sidebar');
   const sidebar = document.getElementById('chat-sidebar');
@@ -15,16 +16,32 @@
   let streaming = false;
   let currentChatId = null;
 
-  // --- Theme ---
+  // --- Theme (custom dropdown, no <select>) ---
   const savedTheme = localStorage.getItem('theme') || '';
   if (savedTheme) {
     document.body.className = savedTheme;
-    themeSelect.value = savedTheme;
   }
-  themeSelect.addEventListener('change', function () {
-    document.body.className = this.value;
-    localStorage.setItem('theme', this.value);
+  function updateThemeActive() {
+    const current = localStorage.getItem('theme') || '';
+    themeMenu.querySelectorAll('.theme-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.theme === current);
+    });
+  }
+  updateThemeActive();
+
+  themeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeMenu.classList.toggle('open');
   });
+  themeMenu.addEventListener('click', (e) => {
+    const opt = e.target.closest('.theme-option');
+    if (!opt) return;
+    document.body.className = opt.dataset.theme;
+    localStorage.setItem('theme', opt.dataset.theme);
+    themeMenu.classList.remove('open');
+    updateThemeActive();
+  });
+  document.addEventListener('click', () => themeMenu.classList.remove('open'));
 
   // --- Sidebar toggle (mobile) ---
   sidebarToggle.addEventListener('click', () => {

@@ -18,13 +18,14 @@
       </div>
       <div class="chat-sidebar-list" id="chat-list"></div>
       <div class="chat-sidebar-footer">
-        <div class="theme-picker">
-          <select id="theme-select">
-            <option value="">Default</option>
-            <option value="theme-monokai">Monokai</option>
-            <option value="theme-dracula">Dracula</option>
-            <option value="theme-nord">Nord</option>
-          </select>
+        <div class="theme-picker-custom" id="theme-picker">
+          <button class="theme-picker-btn" id="theme-btn">Theme</button>
+          <div class="theme-picker-menu" id="theme-menu">
+            <div class="theme-option" data-theme="">Default</div>
+            <div class="theme-option" data-theme="theme-monokai">Monokai</div>
+            <div class="theme-option" data-theme="theme-dracula">Dracula</div>
+            <div class="theme-option" data-theme="theme-nord">Nord</div>
+          </div>
         </div>
         <a href="/" class="btn btn-ghost btn-sm">Dashboard</a>
       </div>

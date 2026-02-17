@@ -703,6 +703,49 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* Custom theme picker (no <select> to avoid iOS keyboard bar) */
+.theme-picker-custom {
+  position: relative;
+}
+
+.theme-picker-btn {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.theme-picker-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+.theme-picker-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 120px;
+  z-index: 10;
+}
+
+.theme-picker-menu.open { display: block; }
+
+.theme-option {
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.theme-option:hover { background: var(--bg-tertiary); }
+.theme-option.active { color: var(--accent); }
+
 /* Chat Main */
 .chat-main {
   flex: 1;
