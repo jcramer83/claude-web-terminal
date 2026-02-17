@@ -1,0 +1,20 @@
+services:
+  claude-code:
+    build: .
+    image: claude-code:latest
+    container_name: claude-code
+    environment:
+      - PASSWORD=dickbutt
+      - TZ=America/Chicago
+    ports:
+      - "8443:8443"
+    volumes:
+      - config:/config
+      - projects:/projects
+      - home:/home/coder
+    restart: unless-stopped
+
+volumes:
+  config:
+  projects:
+  home:

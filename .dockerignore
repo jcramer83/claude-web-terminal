@@ -1,0 +1,4 @@
+node_modules
+.git
+*.md
+setup-code-server.sh
