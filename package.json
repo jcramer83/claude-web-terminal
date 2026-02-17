@@ -1,0 +1,16 @@
+{
+  "name": "claude-web-terminal",
+  "version": "1.0.0",
+  "description": "Web terminal for Claude Code CLI via xterm.js + node-pty",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "node-pty": "^1.0.0",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
+  }
+}

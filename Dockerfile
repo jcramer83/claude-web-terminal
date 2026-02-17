@@ -1,36 +1,32 @@
-FROM node:22-slim
+FROM node:20-slim
 
-# Install system dependencies
+# Install build tools for node-pty and useful utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    python3 \
+    make \
+    g++ \
     git \
-    ssh \
+    curl \
     ca-certificates \
-    sudo \
-    procps \
-    nano \
     && rm -rf /var/lib/apt/lists/*
-
-# Install code-server
-RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create non-root user
-RUN useradd -m -s /bin/bash -d /home/coder coder \
-    && echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/coder
+# Create app directory
+WORKDIR /app
 
-# Create mount point directories
-RUN mkdir -p /config /projects /home/coder/.config /home/coder/.claude \
-    && chown -R coder:coder /home/coder /config /projects
+# Copy package files and install dependencies
+COPY package.json ./
+RUN npm install --production
 
-COPY --chown=coder:coder entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Copy application code
+COPY server.js ./
+COPY public/ ./public/
 
-USER coder
-WORKDIR /projects
+# Create workspace directory
+RUN mkdir -p /workspace
 
-EXPOSE 8443
+EXPOSE 3000
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["node", "server.js"]

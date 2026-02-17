@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Web Terminal</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <h1>Claude Web Terminal</h1>
+      <div class="header-actions">
+        <button class="btn btn-new" id="btn-new">New Session</button>
+        <a href="/logout" class="btn btn-logout" id="btn-logout">Logout</a>
+      </div>
+    </div>
+    <div class="session-list" id="session-list">
+      <div class="empty-state" id="empty-state">
+        <p>No active sessions. Start a new one to begin.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sessionList = document.getElementById('session-list');
+    const emptyState = document.getElementById('empty-state');
+    const btnNew = document.getElementById('btn-new');
+
+    function timeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return hours + 'h ago';
+      return Math.floor(hours / 24) + 'd ago';
+    }
+
+    async function loadSessions() {
+      const res = await fetch('/api/sessions');
+      const list = await res.json();
+
+      // Clear existing cards but keep empty state
+      sessionList.querySelectorAll('.session-card').forEach(el => el.remove());
+
+      if (list.length === 0) {
+        emptyState.style.display = '';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      list.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'session-card';
+        card.innerHTML = `
+          <div class="session-info">
+            <div class="session-title">${s.title}</div>
+            <div class="session-meta">Created ${timeAgo(s.createdAt)} &middot; ${s.id.slice(0, 8)}</div>
+          </div>
+          <div class="session-actions">
+            <button class="btn btn-danger btn-delete" data-id="${s.id}">Delete</button>
+          </div>
+        `;
+        card.querySelector('.session-info').addEventListener('click', () => {
+          window.location.href = '/terminal/' + s.id;
+        });
+        card.querySelector('.btn-delete').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm('Kill this session?')) {
+            await fetch('/api/sessions/' + s.id, { method: 'DELETE' });
+            loadSessions();
+          }
+        });
+        sessionList.appendChild(card);
+      });
+    }
+
+    btnNew.addEventListener('click', async () => {
+      btnNew.disabled = true;
+      btnNew.textContent = 'Starting...';
+      const res = await fetch('/api/sessions', { method: 'POST' });
+      const { id } = await res.json();
+      window.location.href = '/terminal/' + id;
+    });
+
+    loadSessions();
+    // Refresh session list periodically
+    setInterval(loadSessions, 10000);
+  </script>
+</body>
+</html>

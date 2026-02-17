@@ -1,20 +1,18 @@
 services:
-  claude-code:
+  claude-web-terminal:
     build: .
-    image: claude-code:latest
-    container_name: claude-code
+    image: claude-web-terminal:latest
+    container_name: claude-web-terminal
     environment:
-      - PASSWORD=dickbutt
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AUTH_USER=${AUTH_USER:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
       - TZ=America/Chicago
     ports:
-      - "8443:8443"
+      - "3000:3000"
     volumes:
-      - config:/config
-      - projects:/projects
-      - home:/home/coder
+      - workspace:/workspace
     restart: unless-stopped
 
 volumes:
-  config:
-  projects:
-  home:
+  workspace:
