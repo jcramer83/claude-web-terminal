@@ -9,16 +9,68 @@
 </head>
 <body>
   <div class="dashboard">
-    <div class="dashboard-header">
-      <h1>Claude Web Terminal</h1>
-      <div class="header-actions">
-        <button class="btn btn-new" id="btn-new">New Session</button>
-        <a href="/logout" class="btn btn-logout" id="btn-logout">Logout</a>
+    <div class="hero">
+      <img src="/hero.png" alt="">
+      <div class="hero-overlay">
+        <h1>Claude Web Terminal</h1>
+        <p>Claude Code CLI in your browser</p>
       </div>
     </div>
+
+    <div class="dashboard-toolbar">
+      <div class="toolbar-group">
+        <button class="btn btn-new" id="btn-new">+ New Session</button>
+      </div>
+      <div class="toolbar-group">
+        <div class="theme-picker">
+          <select id="theme-select">
+            <option value="">Default</option>
+            <option value="theme-monokai">Monokai</option>
+            <option value="theme-dracula">Dracula</option>
+            <option value="theme-nord">Nord</option>
+          </select>
+        </div>
+        <a href="/logout" class="btn btn-logout">Logout</a>
+      </div>
+    </div>
+
     <div class="session-list" id="session-list">
       <div class="empty-state" id="empty-state">
-        <p>No active sessions. Start a new one to begin.</p>
+        <p>No active sessions. Create one to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Session Modal -->
+  <div class="modal-backdrop" id="modal-new">
+    <div class="modal">
+      <h2>New Session</h2>
+      <div class="form-group">
+        <label for="session-name">Session Name</label>
+        <input type="text" id="session-name" placeholder="e.g. Frontend Refactor">
+      </div>
+      <div class="form-group">
+        <label for="session-cwd">Working Directory</label>
+        <select id="session-cwd"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-new" id="modal-create">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div class="modal-backdrop" id="modal-rename">
+    <div class="modal">
+      <h2>Rename Session</h2>
+      <div class="form-group">
+        <label for="rename-input">New Name</label>
+        <input type="text" id="rename-input">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rename-cancel">Cancel</button>
+        <button class="btn btn-new" id="rename-save">Save</button>
       </div>
     </div>
   </div>
@@ -27,6 +79,21 @@
     const sessionList = document.getElementById('session-list');
     const emptyState = document.getElementById('empty-state');
     const btnNew = document.getElementById('btn-new');
+    const modalNew = document.getElementById('modal-new');
+    const modalRename = document.getElementById('modal-rename');
+    const themeSelect = document.getElementById('theme-select');
+    let renameSessionId = null;
+
+    // Theme
+    const savedTheme = localStorage.getItem('theme') || '';
+    if (savedTheme) {
+      document.body.className = savedTheme;
+      themeSelect.value = savedTheme;
+    }
+    themeSelect.addEventListener('change', function () {
+      document.body.className = this.value;
+      localStorage.setItem('theme', this.value);
+    });
 
     function timeAgo(dateStr) {
       const diff = Date.now() - new Date(dateStr).getTime();
@@ -42,14 +109,12 @@
       const res = await fetch('/api/sessions');
       const list = await res.json();
 
-      // Clear existing cards but keep empty state
       sessionList.querySelectorAll('.session-card').forEach(el => el.remove());
 
       if (list.length === 0) {
         emptyState.style.display = '';
         return;
       }
-
       emptyState.style.display = 'none';
 
       list.forEach(s => {
@@ -57,15 +122,23 @@
         card.className = 'session-card';
         card.innerHTML = `
           <div class="session-info">
-            <div class="session-title">${s.title}</div>
-            <div class="session-meta">Created ${timeAgo(s.createdAt)} &middot; ${s.id.slice(0, 8)}</div>
+            <div class="session-title">${escapeHtml(s.title)}</div>
+            <div class="session-meta">Active ${timeAgo(s.lastActivity)} &middot; ${s.id.slice(0, 8)}</div>
           </div>
           <div class="session-actions">
-            <button class="btn btn-danger btn-delete" data-id="${s.id}">Delete</button>
+            <button class="btn btn-ghost btn-sm btn-rename" data-id="${s.id}" data-title="${escapeHtml(s.title)}">Rename</button>
+            <button class="btn btn-danger btn-sm btn-delete" data-id="${s.id}">Kill</button>
           </div>
         `;
         card.querySelector('.session-info').addEventListener('click', () => {
           window.location.href = '/terminal/' + s.id;
+        });
+        card.querySelector('.btn-rename').addEventListener('click', (e) => {
+          e.stopPropagation();
+          renameSessionId = s.id;
+          document.getElementById('rename-input').value = s.title;
+          modalRename.classList.add('active');
+          document.getElementById('rename-input').focus();
         });
         card.querySelector('.btn-delete').addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -78,16 +151,79 @@
       });
     }
 
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // New session modal
     btnNew.addEventListener('click', async () => {
-      btnNew.disabled = true;
-      btnNew.textContent = 'Starting...';
-      const res = await fetch('/api/sessions', { method: 'POST' });
+      const cwdSelect = document.getElementById('session-cwd');
+      cwdSelect.innerHTML = '<option value="">Loading...</option>';
+      modalNew.classList.add('active');
+      document.getElementById('session-name').value = '';
+      document.getElementById('session-name').focus();
+
+      const res = await fetch('/api/workspaces');
+      const dirs = await res.json();
+      cwdSelect.innerHTML = dirs.map(d =>
+        `<option value="/workspace${d === '/' ? '' : d}">${d === '/' ? '/ (root)' : d}</option>`
+      ).join('');
+    });
+
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+      modalNew.classList.remove('active');
+    });
+
+    document.getElementById('modal-create').addEventListener('click', async () => {
+      const title = document.getElementById('session-name').value.trim();
+      const cwd = document.getElementById('session-cwd').value;
+      const body = {};
+      if (title) body.title = title;
+      if (cwd) body.cwd = cwd;
+
+      document.getElementById('modal-create').disabled = true;
+      document.getElementById('modal-create').textContent = 'Starting...';
+
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
       const { id } = await res.json();
       window.location.href = '/terminal/' + id;
     });
 
+    // Rename modal
+    document.getElementById('rename-cancel').addEventListener('click', () => {
+      modalRename.classList.remove('active');
+    });
+
+    document.getElementById('rename-save').addEventListener('click', async () => {
+      const title = document.getElementById('rename-input').value.trim();
+      if (!title || !renameSessionId) return;
+      await fetch('/api/sessions/' + renameSessionId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      modalRename.classList.remove('active');
+      loadSessions();
+    });
+
+    document.getElementById('rename-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('rename-save').click();
+    });
+
+    // Close modals on backdrop click
+    [modalNew, modalRename].forEach(m => {
+      m.addEventListener('click', (e) => {
+        if (e.target === m) m.classList.remove('active');
+      });
+    });
+
     loadSessions();
-    // Refresh session list periodically
     setInterval(loadSessions, 10000);
   </script>
 </body>

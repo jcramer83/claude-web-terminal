@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Terminal - Claude Web Terminal</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/css/style.css">
@@ -13,18 +13,49 @@
     <div class="terminal-toolbar">
       <div class="toolbar-left">
         <a href="/">&larr; Sessions</a>
-        <span class="toolbar-title" id="toolbar-title"></span>
+        <span class="toolbar-title" id="toolbar-title" title="Click to rename"></span>
       </div>
       <div class="toolbar-right">
+        <div class="theme-picker">
+          <select id="theme-select">
+            <option value="">Default</option>
+            <option value="theme-monokai">Monokai</option>
+            <option value="theme-dracula">Dracula</option>
+            <option value="theme-nord">Nord</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btn-search" title="Search (Ctrl+Shift+F)">Search</button>
+        <button class="btn btn-ghost btn-sm" id="btn-files" title="File Browser">Files</button>
         <span class="connection-status" id="conn-status">Connected</span>
       </div>
     </div>
-    <div id="terminal-container"></div>
+    <div class="search-bar" id="search-bar">
+      <input type="text" id="search-input" placeholder="Search terminal...">
+      <button id="search-prev" title="Previous">&uarr;</button>
+      <button id="search-next" title="Next">&darr;</button>
+      <button id="search-close" title="Close">&times;</button>
+    </div>
+    <div class="terminal-body">
+      <div id="terminal-container"></div>
+      <div class="file-sidebar" id="file-sidebar">
+        <div class="file-sidebar-header">
+          <span>Files</span>
+          <button id="sidebar-close">&times;</button>
+        </div>
+        <div class="file-sidebar-path" id="file-path">/</div>
+        <div class="file-sidebar-actions">
+          <button class="btn btn-ghost btn-sm" id="btn-upload">Upload</button>
+          <input type="file" id="file-upload-input" style="display:none" multiple>
+        </div>
+        <div class="file-list" id="file-list"></div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.15.0/lib/addon-search.min.js"></script>
   <script src="/js/terminal.js"></script>
 </body>
 </html>

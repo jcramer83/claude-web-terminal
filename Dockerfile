@@ -36,6 +36,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENV HOME=/home/claude
 
+# Unraid Docker icon
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/jcramer83/claude-web-terminal/master/public/favicon.png"
+
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
