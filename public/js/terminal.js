@@ -42,6 +42,7 @@
   term.loadAddon(webLinksAddon);
   term.open(document.getElementById('terminal-container'));
   fitAddon.fit();
+  term.focus();
 
   // Handle Ctrl+C (copy if selection, else send interrupt) and Ctrl+V (paste)
   term.attachCustomKeyEventHandler(function (ev) {
