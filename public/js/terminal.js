@@ -127,17 +127,44 @@
     }
   });
 
-  // --- Search ---
+  // --- Search (input created dynamically to avoid iOS keyboard bar) ---
   const searchBar = document.getElementById('search-bar');
-  const searchInput = document.getElementById('search-input');
   const btnSearch = document.getElementById('btn-search');
+  let searchInput = null;
+
+  function createSearchInput() {
+    if (searchInput) return;
+    searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'search-input';
+    searchInput.placeholder = 'Search terminal...';
+    searchBar.insertBefore(searchInput, searchBar.firstChild);
+    searchInput.addEventListener('input', () => {
+      if (searchInput.value) searchAddon.findNext(searchInput.value);
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.shiftKey ? searchAddon.findPrevious(searchInput.value) : searchAddon.findNext(searchInput.value);
+      }
+      if (e.key === 'Escape') toggleSearch();
+    });
+  }
+
+  function destroySearchInput() {
+    if (!searchInput) return;
+    searchInput.remove();
+    searchInput = null;
+  }
 
   function toggleSearch() {
+    const opening = !searchBar.classList.contains('active');
     searchBar.classList.toggle('active');
-    if (searchBar.classList.contains('active')) {
+    if (opening) {
+      createSearchInput();
       searchInput.focus();
     } else {
       searchAddon.clearDecorations();
+      destroySearchInput();
       term.focus();
     }
     fitAddon.fit();
@@ -146,18 +173,8 @@
 
   btnSearch.addEventListener('click', toggleSearch);
   document.getElementById('search-close').addEventListener('click', toggleSearch);
-
-  searchInput.addEventListener('input', () => {
-    if (searchInput.value) searchAddon.findNext(searchInput.value);
-  });
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.shiftKey ? searchAddon.findPrevious(searchInput.value) : searchAddon.findNext(searchInput.value);
-    }
-    if (e.key === 'Escape') toggleSearch();
-  });
-  document.getElementById('search-prev').addEventListener('click', () => searchAddon.findPrevious(searchInput.value));
-  document.getElementById('search-next').addEventListener('click', () => searchAddon.findNext(searchInput.value));
+  document.getElementById('search-prev').addEventListener('click', () => { if (searchInput) searchAddon.findPrevious(searchInput.value); });
+  document.getElementById('search-next').addEventListener('click', () => { if (searchInput) searchAddon.findNext(searchInput.value); });
 
   // --- File Browser ---
   const fileSidebar = document.getElementById('file-sidebar');
@@ -215,21 +232,25 @@
     });
   }
 
-  // Upload
+  // Upload (input created dynamically to avoid iOS keyboard bar)
   document.getElementById('btn-upload').addEventListener('click', () => {
-    document.getElementById('file-upload-input').click();
-  });
-
-  document.getElementById('file-upload-input').addEventListener('change', async (e) => {
-    for (const file of e.target.files) {
-      await fetch('/api/files/upload?path=' + encodeURIComponent(currentFilePath), {
-        method: 'POST',
-        headers: { 'X-Filename': file.name },
-        body: file
-      });
-    }
-    e.target.value = '';
-    loadFiles(currentFilePath);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', async () => {
+      for (const file of input.files) {
+        await fetch('/api/files/upload?path=' + encodeURIComponent(currentFilePath), {
+          method: 'POST',
+          headers: { 'X-Filename': file.name },
+          body: file
+        });
+      }
+      input.remove();
+      loadFiles(currentFilePath);
+    });
+    input.click();
   });
 
   // --- Clipboard ---
