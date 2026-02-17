@@ -26,14 +26,16 @@ RUN npm install --production
 # Copy application code
 COPY server.js ./
 COPY public/ ./public/
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Create workspace and config directories
-RUN mkdir -p /workspace /home/claude/.claude \
-    && chown -R claude:claude /workspace /home/claude
+RUN mkdir -p /workspace /home/claude/.claude/debug \
+    && chown -R claude:claude /workspace /home/claude /app
 
 USER claude
 ENV HOME=/home/claude
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
