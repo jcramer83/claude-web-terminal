@@ -3,6 +3,7 @@ const session = require('express-session');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
 const { v4: uuidv4 } = require('uuid');
+const { spawn } = require('child_process');
 const http = require('http');
 const path = require('path');
 const crypto = require('crypto');
@@ -352,6 +353,105 @@ app.get('/api/workspaces', requireAuth, (req, res) => {
     return results;
   }
   res.json(getDirs(WORKSPACE, '/'));
+});
+
+// --- Chat API ---
+
+app.get('/chat', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+// Active chat processes (to allow cancellation)
+const chatProcesses = new Map();
+
+app.post('/api/chat', requireAuth, (req, res) => {
+  const { message, sessionId } = req.body;
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'Message required' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const args = [
+    '-p', message,
+    '--output-format', 'stream-json',
+    '--max-turns', '1',
+    '--allowedTools', ''
+  ];
+
+  if (sessionId) {
+    args.push('--resume', sessionId);
+  }
+
+  const proc = spawn('claude', args, {
+    cwd: WORKSPACE,
+    env: { ...process.env, HOME: process.env.HOME || '/home/claude' }
+  });
+
+  const procId = uuidv4();
+  chatProcesses.set(procId, proc);
+
+  let buffer = '';
+  let resultSessionId = sessionId || null;
+
+  proc.stdout.on('data', (chunk) => {
+    buffer += chunk.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+
+        // Extract session ID from init or result messages
+        if (obj.session_id) {
+          resultSessionId = obj.session_id;
+        }
+
+        // Handle assistant message content
+        if (obj.type === 'assistant' && obj.message) {
+          const content = obj.message.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === 'text' && block.text) {
+                res.write(`data: ${JSON.stringify({ type: 'text', content: block.text })}\n\n`);
+              }
+            }
+          }
+        }
+
+        // Handle content_block_delta for streaming partial text
+        if (obj.type === 'content_block_delta' && obj.delta?.text) {
+          res.write(`data: ${JSON.stringify({ type: 'text', content: obj.delta.text })}\n\n`);
+        }
+      } catch {}
+    }
+  });
+
+  proc.stderr.on('data', (chunk) => {
+    // Ignore stderr noise from CLI startup
+  });
+
+  proc.on('close', () => {
+    chatProcesses.delete(procId);
+    res.write(`data: ${JSON.stringify({ type: 'done', sessionId: resultSessionId })}\n\n`);
+    res.end();
+  });
+
+  proc.on('error', (err) => {
+    chatProcesses.delete(procId);
+    res.write(`data: ${JSON.stringify({ type: 'error', content: err.message })}\n\n`);
+    res.end();
+  });
+
+  req.on('close', () => {
+    chatProcesses.delete(procId);
+    proc.kill();
+  });
 });
 
 // --- WebSocket ---

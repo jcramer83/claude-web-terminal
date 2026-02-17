@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat - Claude Web Terminal</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="chat-page">
+    <!-- Sidebar -->
+    <div class="chat-sidebar" id="chat-sidebar">
+      <div class="chat-sidebar-header">
+        <a href="/" class="chat-logo">Claude Chat</a>
+        <button class="btn-icon" id="btn-new-chat" title="New Chat">+</button>
+      </div>
+      <div class="chat-sidebar-list" id="chat-list"></div>
+      <div class="chat-sidebar-footer">
+        <div class="theme-picker">
+          <select id="theme-select">
+            <option value="">Default</option>
+            <option value="theme-monokai">Monokai</option>
+            <option value="theme-dracula">Dracula</option>
+            <option value="theme-nord">Nord</option>
+          </select>
+        </div>
+        <a href="/" class="btn btn-ghost btn-sm">Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="chat-main">
+      <div class="chat-topbar">
+        <button class="btn-icon chat-menu-toggle" id="btn-toggle-sidebar" title="Toggle sidebar">&#9776;</button>
+        <span class="chat-topbar-title" id="chat-title">New Chat</span>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome" id="chat-welcome">
+          <h2>Claude Chat</h2>
+          <p>Ask anything. Quick answers without the full terminal.</p>
+        </div>
+      </div>
+
+      <div class="chat-input-bar">
+        <textarea id="chat-input" placeholder="Send a message..." rows="1"></textarea>
+        <button class="btn btn-send" id="btn-send" title="Send">&#10148;</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/chat.js"></script>
+</body>
+</html>
