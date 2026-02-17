@@ -2,7 +2,8 @@
   const sessionId = window.location.pathname.split('/').pop();
   const statusEl = document.getElementById('conn-status');
   const titleEl = document.getElementById('toolbar-title');
-  const themeSelect = document.getElementById('theme-select');
+  const themeBtn = document.getElementById('theme-btn');
+  const themeMenu = document.getElementById('theme-menu');
 
   titleEl.textContent = 'Session ' + sessionId.slice(0, 8);
 
@@ -10,7 +11,6 @@
   const savedTheme = localStorage.getItem('theme') || '';
   if (savedTheme) {
     document.body.className = savedTheme;
-    themeSelect.value = savedTheme;
   }
 
   // Theme definitions for xterm
@@ -82,13 +82,31 @@
   fitAddon.fit();
   term.focus();
 
-  // Theme switcher
-  themeSelect.addEventListener('change', function () {
-    const t = this.value;
+  // Theme switcher (custom dropdown)
+  function updateThemeActive() {
+    const current = localStorage.getItem('theme') || '';
+    themeMenu.querySelectorAll('.theme-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.theme === current);
+    });
+  }
+  updateThemeActive();
+
+  themeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeMenu.classList.toggle('open');
+  });
+  themeMenu.addEventListener('click', (e) => {
+    const opt = e.target.closest('.theme-option');
+    if (!opt) return;
+    const t = opt.dataset.theme;
     document.body.className = t;
     localStorage.setItem('theme', t);
     term.options.theme = themes[t] || themes[''];
+    themeMenu.classList.remove('open');
+    updateThemeActive();
+    term.focus();
   });
+  document.addEventListener('click', () => themeMenu.classList.remove('open'));
 
   // --- Export terminal ---
   document.getElementById('btn-export').addEventListener('click', () => {

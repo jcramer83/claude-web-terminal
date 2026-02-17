@@ -703,6 +703,13 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.chat-sidebar-footer .theme-picker-menu {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
 /* Custom theme picker (no <select> to avoid iOS keyboard bar) */
 .theme-picker-custom {
   position: relative;
@@ -723,9 +730,9 @@ body {
 .theme-picker-menu {
   display: none;
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   left: 0;
-  margin-bottom: 4px;
+  margin-top: 4px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 6px;
