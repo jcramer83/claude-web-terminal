@@ -13,10 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create non-root user so claude CLI runs normally
-RUN useradd -m -s /bin/bash -d /home/claude claude
-
-# Create app directory
 WORKDIR /app
 
 # Copy package files and install dependencies
@@ -26,16 +22,12 @@ RUN npm install --production
 # Copy application code
 COPY server.js ./
 COPY public/ ./public/
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Create workspace and config directories
-RUN mkdir -p /workspace /home/claude/.claude/debug \
-    && chown -R claude:claude /workspace /home/claude /app
+RUN mkdir -p /workspace /root/.claude
 
-ENV HOME=/home/claude
+ENV HOME=/root
 
 EXPOSE 3000
 
-# Run entrypoint as root so it can fix volume permissions, then drops to claude user
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["node", "server.js"]
