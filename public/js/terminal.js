@@ -189,8 +189,14 @@
       if (item.type === 'directory') {
         el.addEventListener('click', () => loadFiles(item.path));
       } else {
+        el.dataset.filePath = item.path;
         el.addEventListener('click', () => {
-          window.open('/api/files/download?path=' + encodeURIComponent(item.path), '_blank');
+          var a = document.createElement('a');
+          a.href = '/api/files/download?path=' + encodeURIComponent(item.path);
+          a.download = item.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         });
       }
       fileList.appendChild(el);
@@ -460,10 +466,27 @@
     items.forEach(function (el) {
       // Skip the ".." parent entry
       if (el.querySelector('.file-item-name').textContent === '..') return;
+      // Download button for files
+      if (el.dataset.filePath) {
+        var dlBtn = document.createElement('span');
+        dlBtn.textContent = '\u2913';
+        dlBtn.title = 'Download';
+        dlBtn.style.cssText = 'margin-left:auto;color:var(--text-secondary);cursor:pointer;padding:0 4px;font-size:16px;flex-shrink:0;';
+        dlBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var a = document.createElement('a');
+          a.href = '/api/files/download?path=' + encodeURIComponent(el.dataset.filePath);
+          a.download = el.querySelector('.file-item-name').textContent;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+        el.appendChild(dlBtn);
+      }
       var delBtn = document.createElement('span');
       delBtn.textContent = '\u00d7';
       delBtn.title = 'Delete';
-      delBtn.style.cssText = 'margin-left:auto;color:var(--text-secondary);cursor:pointer;padding:0 4px;font-size:16px;flex-shrink:0;';
+      delBtn.style.cssText = 'color:var(--text-secondary);cursor:pointer;padding:0 4px;font-size:16px;flex-shrink:0;';
       delBtn.addEventListener('click', async function (e) {
         e.stopPropagation();
         var name = el.querySelector('.file-item-name').textContent;
