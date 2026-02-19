@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI globally (use --force to ensure latest on rebuild)
+# Install Claude Code CLI globally
+# CACHE_BUST arg is set to the current date by CI to force a fresh install
+ARG CACHE_BUST
 RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Create non-root user

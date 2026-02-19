@@ -3,6 +3,9 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [master]
+  schedule:
+    # Rebuild daily at 6am UTC to pick up new Claude Code CLI releases
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 env:
@@ -31,6 +34,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
