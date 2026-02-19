@@ -14,7 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude Code CLI globally
 # CACHE_BUST arg is set to the current date by CI to force a fresh install
 ARG CACHE_BUST
-RUN npm install -g @anthropic-ai/claude-code@latest
+RUN npm install -g @anthropic-ai/claude-code@latest \
+    && CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown") \
+    && echo "Installed Claude Code version: $CLAUDE_VERSION"
+
+# Store the installed version as a label for version checking in CI
+ARG CLAUDE_CODE_VERSION=unknown
+LABEL claude-code-version=$CLAUDE_CODE_VERSION
 
 # Create non-root user
 RUN useradd -m -s /bin/bash -d /home/claude claude
