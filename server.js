@@ -457,6 +457,14 @@ app.post('/api/chat', requireAuth, (req, res) => {
           resultSessionId = obj.session_id;
         }
 
+        // Tool use start — notify client which tool is running
+        if (obj.type === 'stream_event' &&
+            obj.event?.type === 'content_block_start' &&
+            obj.event?.content_block?.type === 'tool_use') {
+          const toolName = obj.event.content_block.name || 'unknown';
+          res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName })}\n\n`);
+        }
+
         // Streaming text deltas (token-by-token)
         if (obj.type === 'stream_event' &&
             obj.event?.type === 'content_block_delta' &&

@@ -225,6 +225,10 @@
               fullText += evt.content;
               assistantBubble.innerHTML = renderMarkdown(fullText);
               scrollToBottom();
+            } else if (evt.type === 'tool') {
+              fullText += (fullText ? '\n\n' : '') + '*Using tool: ' + evt.name + '...*\n\n';
+              assistantBubble.innerHTML = renderMarkdown(fullText);
+              scrollToBottom();
             } else if (evt.type === 'done') {
               if (evt.sessionId) sessionId = evt.sessionId;
             } else if (evt.type === 'error') {
