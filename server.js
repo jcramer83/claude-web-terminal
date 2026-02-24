@@ -355,6 +355,42 @@ app.get('/api/workspaces', requireAuth, (req, res) => {
   res.json(getDirs(WORKSPACE, '/'));
 });
 
+// --- Usage API ---
+
+app.get('/api/usage', requireAuth, async (req, res) => {
+  try {
+    const homedir = process.env.HOME || require('os').homedir();
+    const credPath = path.join(homedir, '.claude', '.credentials.json');
+
+    if (!fs.existsSync(credPath)) {
+      return res.status(404).json({ error: 'No credentials file found' });
+    }
+
+    const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+    const token = creds.claudeAiOauth?.accessToken;
+    if (!token) {
+      return res.status(404).json({ error: 'No OAuth access token found' });
+    }
+
+    const upstream = await fetch('https://api.anthropic.com/api/oauth/usage', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'anthropic-beta': 'oauth-2025-01-01'
+      }
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: `Upstream API returned ${upstream.status}` });
+    }
+
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    console.error('[usage] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Chat API ---
 
 app.get('/chat', requireAuth, (req, res) => {

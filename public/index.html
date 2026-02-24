@@ -35,6 +35,33 @@
       </div>
     </div>
 
+    <div class="usage-stats" id="usage-stats" style="display:none">
+      <div class="usage-bar-container">
+        <div class="usage-bar-label">
+          <span>5-Hour Session</span>
+          <span class="usage-pct" id="usage-5h-pct"></span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" id="usage-5h-fill"></div></div>
+        <div class="usage-reset" id="usage-5h-reset"></div>
+      </div>
+      <div class="usage-bar-container">
+        <div class="usage-bar-label">
+          <span>7-Day Weekly</span>
+          <span class="usage-pct" id="usage-7d-pct"></span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" id="usage-7d-fill"></div></div>
+        <div class="usage-reset" id="usage-7d-reset"></div>
+      </div>
+      <div class="usage-bar-container" id="usage-sonnet-container" style="display:none">
+        <div class="usage-bar-label">
+          <span>7-Day Sonnet</span>
+          <span class="usage-pct" id="usage-sonnet-pct"></span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" id="usage-sonnet-fill"></div></div>
+        <div class="usage-reset" id="usage-sonnet-reset"></div>
+      </div>
+    </div>
+
     <div class="session-list" id="session-list">
       <div class="empty-state" id="empty-state">
         <p>No active sessions. Create one to get started.</p>
@@ -224,6 +251,62 @@
       });
     });
 
+    // Usage stats
+    async function loadUsage() {
+      const container = document.getElementById('usage-stats');
+      try {
+        const res = await fetch('/api/usage');
+        const data = await res.json();
+        console.log('[usage] response:', data);
+
+        if (!res.ok || data.error) {
+          console.warn('[usage] error:', data.error);
+          container.style.display = 'none';
+          return;
+        }
+
+        container.style.display = '';
+
+        function applyBar(fillId, pctId, resetId, utilization, resetAt) {
+          const pct = Math.min(Math.round(utilization * 100), 100);
+          const fill = document.getElementById(fillId);
+          const pctEl = document.getElementById(pctId);
+          const resetEl = document.getElementById(resetId);
+
+          fill.style.width = pct + '%';
+          fill.className = 'usage-bar-fill' + (pct > 80 ? ' usage-red' : pct > 50 ? ' usage-yellow' : ' usage-green');
+          pctEl.textContent = pct + '%';
+          if (resetAt) {
+            const d = new Date(resetAt);
+            resetEl.textContent = 'Resets at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+
+        // Try multiple possible field name patterns from the API
+        const s5h = data.standardUtilization ?? data.standard_utilization ?? data.fiveHourUtilization;
+        const s5hReset = data.standardResetAt ?? data.standard_reset_at ?? data.fiveHourResetAt;
+        const w7d = data.weeklyUtilization ?? data.weekly_utilization;
+        const w7dReset = data.weeklyResetAt ?? data.weekly_reset_at;
+        const bonus = data.bonusUtilization ?? data.bonus_utilization ?? data.sonnetUtilization ?? data.sonnet_utilization;
+        const bonusReset = data.bonusResetAt ?? data.bonus_reset_at ?? data.sonnetResetAt ?? data.sonnet_reset_at;
+
+        if (s5h != null) {
+          applyBar('usage-5h-fill', 'usage-5h-pct', 'usage-5h-reset', s5h, s5hReset);
+        }
+        if (w7d != null) {
+          applyBar('usage-7d-fill', 'usage-7d-pct', 'usage-7d-reset', w7d, w7dReset);
+        }
+        if (bonus != null) {
+          document.getElementById('usage-sonnet-container').style.display = '';
+          applyBar('usage-sonnet-fill', 'usage-sonnet-pct', 'usage-sonnet-reset', bonus, bonusReset);
+        }
+      } catch (err) {
+        console.error('[usage] fetch failed:', err);
+        container.style.display = 'none';
+      }
+    }
+
+    loadUsage();
     loadSessions();
     setInterval(loadSessions, 10000);
   </script>
