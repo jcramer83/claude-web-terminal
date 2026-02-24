@@ -360,12 +360,22 @@ app.get('/api/workspaces', requireAuth, (req, res) => {
 app.get('/api/usage', requireAuth, async (req, res) => {
   try {
     const homedir = process.env.HOME || require('os').homedir();
-    const credPath = path.join(homedir, '.claude', '.credentials.json');
+    const candidates = [
+      path.join(homedir, '.claude', '.credentials.json'),
+      '/home/claude/.claude/.credentials.json'
+    ];
 
-    if (!fs.existsSync(credPath)) {
-      return res.status(404).json({ error: 'No credentials file found' });
+    let credPath = null;
+    for (const p of candidates) {
+      if (fs.existsSync(p)) { credPath = p; break; }
     }
 
+    if (!credPath) {
+      console.log('[usage] no credentials file found, checked:', candidates);
+      return res.status(404).json({ error: 'No credentials file found', checked: candidates });
+    }
+
+    console.log('[usage] using credentials from:', credPath);
     const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
     const token = creds.claudeAiOauth?.accessToken;
     if (!token) {

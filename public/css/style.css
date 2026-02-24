@@ -269,6 +269,11 @@ body {
   gap: 12px;
 }
 
+.usage-loading {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .usage-bar-container {
   display: flex;
   flex-direction: column;

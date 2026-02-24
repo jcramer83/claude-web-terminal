@@ -35,7 +35,8 @@
       </div>
     </div>
 
-    <div class="usage-stats" id="usage-stats" style="display:none">
+    <div class="usage-stats" id="usage-stats">
+      <div class="usage-loading" id="usage-loading">Loading usage stats...</div>
       <div class="usage-bar-container">
         <div class="usage-bar-label">
           <span>5-Hour Session</span>
@@ -254,18 +255,20 @@
     // Usage stats
     async function loadUsage() {
       const container = document.getElementById('usage-stats');
+      const loading = document.getElementById('usage-loading');
       try {
         const res = await fetch('/api/usage');
         const data = await res.json();
-        console.log('[usage] response:', data);
+        console.log('[usage] response:', JSON.stringify(data));
 
         if (!res.ok || data.error) {
           console.warn('[usage] error:', data.error);
-          container.style.display = 'none';
+          loading.textContent = 'Usage: ' + (data.error || 'unavailable');
+          loading.style.color = 'var(--text-secondary)';
           return;
         }
 
-        container.style.display = '';
+        loading.style.display = 'none';
 
         function applyBar(fillId, pctId, resetId, utilization, resetAt) {
           const pct = Math.min(Math.round(utilization * 100), 100);
@@ -302,7 +305,8 @@
         }
       } catch (err) {
         console.error('[usage] fetch failed:', err);
-        container.style.display = 'none';
+        loading.textContent = 'Usage: failed to load';
+        loading.style.color = 'var(--text-secondary)';
       }
     }
 
