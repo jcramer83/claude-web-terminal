@@ -385,7 +385,7 @@ app.get('/api/usage', requireAuth, async (req, res) => {
     const upstream = await fetch('https://api.anthropic.com/api/oauth/usage', {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'anthropic-beta': 'oauth-2025-01-01'
+        'anthropic-beta': 'oauth-2025-04-20'
       }
     });
 

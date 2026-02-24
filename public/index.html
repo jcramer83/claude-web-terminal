@@ -285,23 +285,16 @@
           }
         }
 
-        // Try multiple possible field name patterns from the API
-        const s5h = data.standardUtilization ?? data.standard_utilization ?? data.fiveHourUtilization;
-        const s5hReset = data.standardResetAt ?? data.standard_reset_at ?? data.fiveHourResetAt;
-        const w7d = data.weeklyUtilization ?? data.weekly_utilization;
-        const w7dReset = data.weeklyResetAt ?? data.weekly_reset_at;
-        const bonus = data.bonusUtilization ?? data.bonus_utilization ?? data.sonnetUtilization ?? data.sonnet_utilization;
-        const bonusReset = data.bonusResetAt ?? data.bonus_reset_at ?? data.sonnetResetAt ?? data.sonnet_reset_at;
-
-        if (s5h != null) {
-          applyBar('usage-5h-fill', 'usage-5h-pct', 'usage-5h-reset', s5h, s5hReset);
+        // API returns: { five_hour: { utilization, resets_at }, seven_day: {...}, seven_day_sonnet: {...} }
+        if (data.five_hour) {
+          applyBar('usage-5h-fill', 'usage-5h-pct', 'usage-5h-reset', data.five_hour.utilization / 100, data.five_hour.resets_at);
         }
-        if (w7d != null) {
-          applyBar('usage-7d-fill', 'usage-7d-pct', 'usage-7d-reset', w7d, w7dReset);
+        if (data.seven_day) {
+          applyBar('usage-7d-fill', 'usage-7d-pct', 'usage-7d-reset', data.seven_day.utilization / 100, data.seven_day.resets_at);
         }
-        if (bonus != null) {
+        if (data.seven_day_sonnet) {
           document.getElementById('usage-sonnet-container').style.display = '';
-          applyBar('usage-sonnet-fill', 'usage-sonnet-pct', 'usage-sonnet-reset', bonus, bonusReset);
+          applyBar('usage-sonnet-fill', 'usage-sonnet-pct', 'usage-sonnet-reset', data.seven_day_sonnet.utilization / 100, data.seven_day_sonnet.resets_at);
         }
       } catch (err) {
         console.error('[usage] fetch failed:', err);
