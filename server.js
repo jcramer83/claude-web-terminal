@@ -37,6 +37,82 @@ app.use(sessionMiddleware);
 // PTY session manager
 const sessions = new Map();
 
+// Background keepalive session — keeps OAuth credentials fresh for usage API
+const KEEPALIVE_ID = 'keepalive-background';
+const KEEPALIVE_REFRESH_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+function startKeepAliveSession() {
+  // Kill existing keepalive if present
+  const existing = sessions.get(KEEPALIVE_ID);
+  if (existing) {
+    try { existing.pty.kill(); } catch {}
+    sessions.delete(KEEPALIVE_ID);
+    console.log('[keepalive] killed previous background session');
+  }
+
+  const shell = '/bin/bash';
+  const cwd = WORKSPACE;
+  try { fs.mkdirSync(cwd, { recursive: true }); } catch {}
+
+  const ptyProcess = pty.spawn(shell, [], {
+    name: 'xterm-256color',
+    cols: 80,
+    rows: 24,
+    cwd,
+    env: {
+      ...process.env,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      HOME: process.env.HOME || '/home/claude'
+    }
+  });
+
+  // Launch claude CLI after shell is ready
+  setTimeout(() => {
+    ptyProcess.write('claude\r');
+  }, 500);
+
+  const sessionData = {
+    pty: ptyProcess,
+    createdAt: new Date().toISOString(),
+    lastActivity: new Date().toISOString(),
+    title: '__keepalive__',
+    cwd,
+    clients: new Set(),
+    scrollback: [],
+    hidden: true
+  };
+
+  ptyProcess.onData((data) => {
+    sessionData.lastActivity = new Date().toISOString();
+    sessionData.scrollback.push(data);
+    let totalLen = 0;
+    for (let i = sessionData.scrollback.length - 1; i >= 0; i--) {
+      totalLen += sessionData.scrollback[i].length;
+      if (totalLen > SCROLLBACK_LIMIT) {
+        sessionData.scrollback = sessionData.scrollback.slice(i + 1);
+        break;
+      }
+    }
+  });
+
+  ptyProcess.onExit(() => {
+    console.log('[keepalive] background session exited, will restart');
+    sessions.delete(KEEPALIVE_ID);
+    // Auto-restart after a short delay
+    setTimeout(startKeepAliveSession, 5000);
+  });
+
+  sessions.set(KEEPALIVE_ID, sessionData);
+  console.log('[keepalive] background session started (refreshes every 3h)');
+}
+
+// Refresh keepalive session every 3 hours
+setInterval(() => {
+  console.log('[keepalive] 3-hour refresh triggered');
+  startKeepAliveSession();
+}, KEEPALIVE_REFRESH_MS);
+
 // Auth middleware
 function requireAuth(req, res, next) {
   if (!AUTH_ENABLED || req.session.authenticated) return next();
@@ -86,6 +162,7 @@ app.get('/terminal/:id', requireAuth, (req, res) => {
 app.get('/api/sessions', requireAuth, (req, res) => {
   const list = [];
   for (const [id, s] of sessions) {
+    if (s.hidden) continue; // hide background keepalive session
     list.push({
       id,
       createdAt: s.createdAt,
@@ -632,7 +709,8 @@ setInterval(() => {
       sessions.delete(id);
       continue;
     }
-    // Idle timeout
+    // Idle timeout (skip hidden keepalive sessions)
+    if (s.hidden) continue;
     const idleMs = now - new Date(s.lastActivity).getTime();
     if (IDLE_TIMEOUT_HOURS > 0 && idleMs > IDLE_TIMEOUT_HOURS * 60 * 60 * 1000) {
       console.log(`Killing idle session ${id} (${s.title})`);
@@ -652,4 +730,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`Claude Web Terminal running on port ${PORT}`);
   console.log(`Auth: ${AUTH_ENABLED ? 'enabled' : 'disabled'}`);
   console.log(`Idle timeout: ${IDLE_TIMEOUT_HOURS}h`);
+
+  // Start background keepalive session to keep OAuth fresh for usage API
+  setTimeout(startKeepAliveSession, 2000);
 });
