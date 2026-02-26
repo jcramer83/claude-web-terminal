@@ -434,37 +434,108 @@ app.get('/api/workspaces', requireAuth, (req, res) => {
 
 // --- Usage API ---
 
+// Claude Code CLI OAuth client ID
+const CLAUDE_OAUTH_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+
+function getCredentialsPath() {
+  const homedir = process.env.HOME || require('os').homedir();
+  const candidates = [
+    path.join(homedir, '.claude', '.credentials.json'),
+    '/home/claude/.claude/.credentials.json'
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+async function refreshOAuthToken(credPath, creds) {
+  const refreshToken = creds.claudeAiOauth?.refreshToken;
+  if (!refreshToken) {
+    console.log('[usage] no refresh token available');
+    return null;
+  }
+
+  console.log('[usage] access token expired, attempting refresh...');
+  const refreshRes = await fetch('https://console.anthropic.com/api/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: CLAUDE_OAUTH_CLIENT_ID
+    })
+  });
+
+  if (!refreshRes.ok) {
+    console.error('[usage] token refresh failed:', refreshRes.status);
+    return null;
+  }
+
+  const tokenData = await refreshRes.json();
+  console.log('[usage] token refreshed successfully');
+
+  // Update credentials file with new tokens
+  creds.claudeAiOauth.accessToken = tokenData.access_token;
+  if (tokenData.refresh_token) {
+    creds.claudeAiOauth.refreshToken = tokenData.refresh_token;
+  }
+  if (tokenData.expires_in) {
+    creds.claudeAiOauth.expiresAt = Date.now() + tokenData.expires_in * 1000;
+  }
+
+  try {
+    fs.writeFileSync(credPath, JSON.stringify(creds, null, 2), 'utf8');
+    console.log('[usage] credentials file updated');
+  } catch (err) {
+    console.error('[usage] failed to write credentials:', err.message);
+  }
+
+  return tokenData.access_token;
+}
+
 app.get('/api/usage', requireAuth, async (req, res) => {
   try {
-    const homedir = process.env.HOME || require('os').homedir();
-    const candidates = [
-      path.join(homedir, '.claude', '.credentials.json'),
-      '/home/claude/.claude/.credentials.json'
-    ];
-
-    let credPath = null;
-    for (const p of candidates) {
-      if (fs.existsSync(p)) { credPath = p; break; }
-    }
-
+    const credPath = getCredentialsPath();
     if (!credPath) {
-      console.log('[usage] no credentials file found, checked:', candidates);
-      return res.status(404).json({ error: 'No credentials file found', checked: candidates });
+      console.log('[usage] no credentials file found');
+      return res.status(404).json({ error: 'No credentials file found' });
     }
 
     console.log('[usage] using credentials from:', credPath);
     const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-    const token = creds.claudeAiOauth?.accessToken;
+    let token = creds.claudeAiOauth?.accessToken;
     if (!token) {
       return res.status(404).json({ error: 'No OAuth access token found' });
     }
 
-    const upstream = await fetch('https://api.anthropic.com/api/oauth/usage', {
+    // Check if token is expired (with 5 min buffer)
+    const expiresAt = creds.claudeAiOauth?.expiresAt;
+    if (expiresAt && Date.now() > expiresAt - 5 * 60 * 1000) {
+      const newToken = await refreshOAuthToken(credPath, creds);
+      if (newToken) token = newToken;
+    }
+
+    let upstream = await fetch('https://api.anthropic.com/api/oauth/usage', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'anthropic-beta': 'oauth-2025-04-20'
       }
     });
+
+    // If 401, try refreshing the token and retry once
+    if (upstream.status === 401) {
+      const newToken = await refreshOAuthToken(credPath, creds);
+      if (newToken) {
+        token = newToken;
+        upstream = await fetch('https://api.anthropic.com/api/oauth/usage', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'anthropic-beta': 'oauth-2025-04-20'
+          }
+        });
+      }
+    }
 
     if (!upstream.ok) {
       return res.status(upstream.status).json({ error: `Upstream API returned ${upstream.status}` });
